@@ -139,11 +139,20 @@ impl CPU {
                     self.program_counter += 1;
                     self.ldx(param);
                 }
+                0xA5 => {
+                    // Reads an extra byte for parameter
+                    self.lda(&AddressingMode::ZeroPage);
+                    self.program_counter += 1;
+                }
                 0xA9 => {
                     // Reads an extra byte for parameter
-                    let param = self.memory[self.program_counter as usize];
+                    self.lda(&AddressingMode::Immediate);
                     self.program_counter += 1;
-                    self.lda(param);
+                }
+                0xAD => {
+                    // Reads an extra byte for parameter
+                    self.lda(&AddressingMode::Absolute);
+                    self.program_counter += 2;
                 }
                 0xAA => {
                     self.tax();
@@ -156,8 +165,11 @@ impl CPU {
         }
     }
 
-    fn lda(&mut self, value: u8) {
-        self.register_a = value;
+    fn lda(&mut self, mode: &AddressingMode) {
+        let operand_addr = self.get_operand_address(mode);
+        let operand_value = self.mem_read(operand_addr);
+
+        self.register_a = operand_value;
         self.update_zero_and_negative_flags(self.register_a);
     }
 
