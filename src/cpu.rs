@@ -133,6 +133,14 @@ impl CPU {
                 0x00 => {
                     return;
                 }
+                0x85 => {
+                    self.sta(&AddressingMode::ZeroPage);
+                    self.program_counter += 1;
+                }
+                0x95 => {
+                    self.sta(&AddressingMode::ZeroPage_X);
+                    self.program_counter += 1;
+                }
                 0xA2 => {
                     // Reads an extra byte for parameter
                     let param = self.memory[self.program_counter as usize];
@@ -186,6 +194,11 @@ impl CPU {
     fn inx(&mut self) {
         self.register_x = self.register_x.wrapping_add(1);
         self.update_zero_and_negative_flags(self.register_x);
+    }
+
+    fn sta(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        self.mem_write(addr, self.register_a);
     }
 
     fn update_zero_and_negative_flags(&mut self, value: u8) {
@@ -293,5 +306,28 @@ mod test {
         cpu.load_and_run(vec![0xa2, 0xff, 0xe8, 0xe8, 0x00]);
 
         assert_eq!(cpu.register_x, 1)
+    }
+
+    #[test]
+    fn test_0x85_sta() {
+        let mut cpu = CPU::new();
+        let reg_a_val = 0x09;
+        let destination_addr = 0x28;
+        cpu.load_and_run(vec![0xa9, reg_a_val, 0x85, destination_addr]);
+
+        assert_eq!(cpu.register_a, reg_a_val);
+        assert_eq!(cpu.memory[destination_addr as usize], reg_a_val);
+    }
+
+    #[test]
+    fn test_0x95_sta() {
+        let mut cpu = CPU::new();
+        let reg_a_val = 0x09;
+        let reg_x_val = 0x02;
+        let destination_addr = 0x28;
+        cpu.load_and_run(vec![0xa2, reg_x_val, 0xa9, reg_a_val, 0x95, destination_addr]);
+
+        assert_eq!(cpu.register_a, reg_a_val);
+        assert_eq!(cpu.memory[(destination_addr.wrapping_add(reg_x_val)) as usize], reg_a_val);
     }
 }
