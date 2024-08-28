@@ -1,9 +1,24 @@
+#[allow(non_camel_case_types)]
+pub enum AddressingMode {
+    Immediate,
+    ZeroPage,
+    ZeroPage_X,
+    ZeroPage_Y,
+    Absolute,
+    Absolute_X,
+    Absolute_Y,
+    Indirect_X,
+    Indirect_Y,
+    NoneAddressing,
+}
+
 pub struct CPU {
     pub register_a: u8,
     pub register_x: u8,
+    pub register_y: u8,
     pub status: u8, // N V NOT_USED B D I Z C
     pub program_counter: u16,
-    memory: [u8; 0xFFFF]
+    memory: [u8; 0xFFFF],
 }
 
 /**
@@ -20,9 +35,54 @@ impl CPU {
         CPU {
             register_a: 0,
             register_x: 0,
+            register_y: 0,
             status: 0,
             program_counter: 0,
-            memory: [0; 0xFFFF]
+            memory: [0; 0xFFFF],
+        }
+    }
+
+    /**
+     * Addressing modes are cracked https://skilldrick.github.io/easy6502/#addressing.
+     * Depending on context, we interpret the subsequent 1/2/3 bytes differently
+     * to find the value we need as an operand for our command.
+     */
+    fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
+        match mode {
+            AddressingMode::Immediate => self.program_counter,
+            AddressingMode::ZeroPage => self.mem_read(self.program_counter) as u16,
+            AddressingMode::ZeroPage_X => {
+                let addr = self.mem_read(self.program_counter);
+                addr.wrapping_add(self.register_x) as u16
+            },
+            AddressingMode::ZeroPage_Y => {
+                let addr = self.mem_read(self.program_counter);
+                addr.wrapping_add(self.register_y) as u16
+            },
+            AddressingMode::Absolute => self.mem_read_u16(self.program_counter),
+            AddressingMode::Absolute_X => {
+                let addr = self.mem_read_u16(self.program_counter);
+                addr.wrapping_add(self.register_x as u16) as u16
+            },
+            AddressingMode::Absolute_Y => {
+                let addr = self.mem_read_u16(self.program_counter);
+                addr.wrapping_add(self.register_y as u16) as u16
+            },
+            AddressingMode::Indirect_X => {
+                let addr = self.mem_read(self.program_counter);
+                let x_addr = addr.wrapping_add(self.register_x) as u16;
+                let lo_addr = self.mem_read(x_addr) as u16;
+                let hi_addr = self.mem_read(x_addr.wrapping_add(1)) as u16;
+                hi_addr << 8 | lo_addr
+            },
+            AddressingMode::Indirect_Y => {
+                let addr = self.mem_read(self.program_counter);
+                let lo_addr = self.mem_read(addr as u16) as u16;
+                let hi_addr = self.mem_read(addr.wrapping_add(1) as u16) as u16;
+                let preoffset_addr = (hi_addr << 8) | lo_addr;
+                preoffset_addr.wrapping_add(self.register_y as u16)
+            },
+            AddressingMode::NoneAddressing => panic!("Go to sleep. This is not working.")
         }
     }
 
@@ -30,14 +90,14 @@ impl CPU {
         self.memory[addr as usize]
     }
 
-    fn mem_write(&mut self, addr: u16, data: u8){
+    fn mem_write(&mut self, addr: u16, data: u8) {
         self.memory[addr as usize] = data;
     }
 
     fn mem_read_u16(&self, addr: u16) -> u16 {
         let lo = self.mem_read(addr) as u16;
         let hi = self.mem_read(addr + 1) as u16;
-        (hi << 8) | lo 
+        (hi << 8) | lo
     }
 
     fn mem_write_u16(&mut self, addr: u16, data: u16) {
