@@ -54,35 +54,35 @@ impl CPU {
             AddressingMode::ZeroPage_X => {
                 let addr = self.mem_read(self.program_counter);
                 addr.wrapping_add(self.register_x) as u16
-            },
+            }
             AddressingMode::ZeroPage_Y => {
                 let addr = self.mem_read(self.program_counter);
                 addr.wrapping_add(self.register_y) as u16
-            },
+            }
             AddressingMode::Absolute => self.mem_read_u16(self.program_counter),
             AddressingMode::Absolute_X => {
                 let addr = self.mem_read_u16(self.program_counter);
                 addr.wrapping_add(self.register_x as u16) as u16
-            },
+            }
             AddressingMode::Absolute_Y => {
                 let addr = self.mem_read_u16(self.program_counter);
                 addr.wrapping_add(self.register_y as u16) as u16
-            },
+            }
             AddressingMode::Indirect_X => {
                 let addr = self.mem_read(self.program_counter);
                 let x_addr = addr.wrapping_add(self.register_x) as u16;
                 let lo_addr = self.mem_read(x_addr) as u16;
                 let hi_addr = self.mem_read(x_addr.wrapping_add(1)) as u16;
                 hi_addr << 8 | lo_addr
-            },
+            }
             AddressingMode::Indirect_Y => {
                 let addr = self.mem_read(self.program_counter);
                 let lo_addr = self.mem_read(addr as u16) as u16;
                 let hi_addr = self.mem_read(addr.wrapping_add(1) as u16) as u16;
                 let preoffset_addr = (hi_addr << 8) | lo_addr;
                 preoffset_addr.wrapping_add(self.register_y as u16)
-            },
-            AddressingMode::NoneAddressing => panic!("Go to sleep. This is not working.")
+            }
+            AddressingMode::NoneAddressing => panic!("Go to sleep. This is not working."),
         }
     }
 
