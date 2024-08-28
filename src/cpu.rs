@@ -39,7 +39,6 @@ impl CPU {
                     let param = program[self.program_counter as usize];
                     self.program_counter += 1;
                     self.ldx(param);
-
                 }
                 0xA9 => {
                     // Reads an extra byte for parameter
@@ -47,7 +46,12 @@ impl CPU {
                     self.program_counter += 1;
                     self.lda(param);
                 }
-                0xAA => { self.tax(); }
+                0xAA => {
+                    self.tax();
+                }
+                0xE8 => {
+                    self.inx();
+                }
                 _ => todo!(),
             }
         }
@@ -65,6 +69,11 @@ impl CPU {
 
     fn tax(&mut self) {
         self.register_x = self.register_a;
+        self.update_zero_and_negative_flags(self.register_x);
+    }
+
+    fn inx(&mut self) {
+        self.register_x = self.register_x.wrapping_add(1);
         self.update_zero_and_negative_flags(self.register_x);
     }
 
@@ -158,5 +167,22 @@ mod test {
         assert_eq!(cpu.register_x, 10);
         assert!(cpu.status & 0b0000_0010 == 0b00); // Zero set?
         assert!(cpu.status & 0b1000_0000 == 0); // Negative unset?
+    }
+
+    #[test]
+    fn test_5_ops_working_together() {
+        let mut cpu = CPU::new();
+        cpu.interpret(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
+
+        assert_eq!(cpu.register_x, 0xc1)
+    }
+
+    #[test]
+    fn test_inx_overflow() {
+        let mut cpu = CPU::new();
+        cpu.register_x = 0xff;
+        cpu.interpret(vec![0xe8, 0xe8, 0x00]);
+
+        assert_eq!(cpu.register_x, 1)
     }
 }
