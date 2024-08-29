@@ -3,6 +3,7 @@ use bitflags::bitflags;
 
 bitflags! {
     // N V B2 B D I Z C
+    #[derive(PartialEq)]
     struct Flags: u8 {
         const RESET             = 0b0000_0000;
         const CARRY             = 0b0000_0001;
@@ -222,9 +223,8 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa9, 0x05, 0x00]);
         assert_eq!(cpu.register_a, 0b0000_0101);
-        assert_eq!(cpu.status, 0);
-        assert!(cpu.status & 0b0000_0010 == 0b00); // Zero unset?
-        assert!(cpu.status & 0b1000_0000 == 0); // Negative unset?
+        assert!(!cpu.status.contains(Flags::ZERO));
+        assert!(!cpu.status.contains(Flags::NEGATIVE));
     }
 
     #[test]
@@ -232,9 +232,8 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa9, 0x00, 0x00]);
         assert_eq!(cpu.register_a, 0x00);
-        assert_eq!(cpu.status, 2);
-        assert!(cpu.status & 0b0000_0010 == 0b10); // Zero set?
-        assert!(cpu.status & 0b1000_0000 == 0); // Negative unset?
+        assert!(cpu.status.contains(Flags::ZERO));
+        assert!(!cpu.status.contains(Flags::NEGATIVE));
     }
 
     #[test]
@@ -242,9 +241,8 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa9, 0x09, 0x00]);
         assert_eq!(cpu.register_a, 0x09);
-        assert_eq!(cpu.status, 0);
-        assert!(cpu.status & 0b0000_0010 == 0b00); // Zero set?
-        assert!(cpu.status & 0b1000_0000 == 0); // Negative unset?
+        assert!(!cpu.status.contains(Flags::ZERO));
+        assert!(!cpu.status.contains(Flags::NEGATIVE));
     }
 
     #[test]
@@ -252,9 +250,8 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa2, 0x05, 0x00]);
         assert_eq!(cpu.register_x, 0b0000_0101);
-        assert_eq!(cpu.status, 0);
-        assert!(cpu.status & 0b0000_0010 == 0b00); // Zero unset?
-        assert!(cpu.status & 0b1000_0000 == 0); // Negative unset?
+        assert!(!cpu.status.contains(Flags::ZERO));
+        assert!(!cpu.status.contains(Flags::NEGATIVE));
     }
 
     #[test]
@@ -262,9 +259,8 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa2, 0x00, 0x00]);
         assert_eq!(cpu.register_x, 0x00);
-        assert_eq!(cpu.status, 2);
-        assert!(cpu.status & 0b0000_0010 == 0b10); // Zero set?
-        assert!(cpu.status & 0b1000_0000 == 0); // Negative unset?
+        assert!(cpu.status.contains(Flags::ZERO));
+        assert!(!cpu.status.contains(Flags::NEGATIVE));
     }
 
     #[test]
@@ -272,9 +268,8 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa2, 0x09, 0x00]);
         assert_eq!(cpu.register_x, 0x09);
-        assert_eq!(cpu.status, 0);
-        assert!(cpu.status & 0b0000_0010 == 0b00); // Zero set?
-        assert!(cpu.status & 0b1000_0000 == 0); // Negative unset?
+        assert!(!cpu.status.contains(Flags::ZERO));
+        assert!(!cpu.status.contains(Flags::NEGATIVE));
     }
 
     #[test]
@@ -283,8 +278,8 @@ mod test {
         cpu.load_and_run(vec![0xa9, 10, 0xaa, 0x00]);
 
         assert_eq!(cpu.register_x, 10);
-        assert!(cpu.status & 0b0000_0010 == 0b00); // Zero set?
-        assert!(cpu.status & 0b1000_0000 == 0); // Negative unset?
+        assert!(!cpu.status.contains(Flags::ZERO));
+        assert!(!cpu.status.contains(Flags::NEGATIVE));
     }
 
     #[test]
