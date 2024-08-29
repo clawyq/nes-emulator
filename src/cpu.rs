@@ -1,3 +1,5 @@
+use crate::opcodes::get_opcode_details;
+
 #[allow(non_camel_case_types)]
 pub enum AddressingMode {
     Immediate,
@@ -9,7 +11,7 @@ pub enum AddressingMode {
     Absolute_Y,
     Indirect_X,
     Indirect_Y,
-    NoneAddressing,
+    Implied,
 }
 
 pub struct CPU {
@@ -78,7 +80,7 @@ impl CPU {
                 let preoffset_addr = u16::from_le_bytes([self.mem_read(addr as u16), self.mem_read(addr.wrapping_add(1) as u16)]);
                 preoffset_addr.wrapping_add(self.register_y as u16)
             }
-            AddressingMode::NoneAddressing => panic!("Go to sleep. This is not working."),
+            AddressingMode::Implied => panic!("Go to sleep. This is not working."),
         }
     }
 
@@ -121,40 +123,22 @@ impl CPU {
 
     pub fn run(&mut self) {
         loop {
-            let opscode = self.mem_read(self.program_counter);
+            let opcode = self.mem_read(self.program_counter);
+            let opcode_details = get_opcode_details(&opcode).expect(&format!("Opcode {opcode} is not recognised."));
             self.program_counter += 1 as u16;
-            match opscode {
+            match opcode {
                 0x00 => {
                     return;
                 }
-                0x85 => {
-                    self.sta(&AddressingMode::ZeroPage);
-                    self.program_counter += 1;
-                }
-                0x95 => {
-                    self.sta(&AddressingMode::ZeroPage_X);
-                    self.program_counter += 1;
+                0x85 | 0x95 => {
+                    self.sta(&(opcode_details.mode));
                 }
                 0xA2 => {
-                    // Reads an extra byte for parameter
                     let param = self.memory[self.program_counter as usize];
-                    self.program_counter += 1;
                     self.ldx(param);
                 }
-                0xA5 => {
-                    // Reads an extra byte for parameter
-                    self.lda(&AddressingMode::ZeroPage);
-                    self.program_counter += 1;
-                }
-                0xA9 => {
-                    // Reads an extra byte for parameter
-                    self.lda(&AddressingMode::Immediate);
-                    self.program_counter += 1;
-                }
-                0xAD => {
-                    // Reads an extra byte for parameter
-                    self.lda(&AddressingMode::Absolute);
-                    self.program_counter += 2;
+                0xA5 | 0xA9 | 0xAD => {
+                    self.lda(&(opcode_details.mode));
                 }
                 0xAA => {
                     self.tax();
@@ -164,6 +148,7 @@ impl CPU {
                 }
                 _ => todo!(),
             }
+            self.program_counter+= opcode_details.additional_bytes as u16;
         }
     }
 
