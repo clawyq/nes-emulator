@@ -1,4 +1,20 @@
 use crate::opcodes::get_opcode_details;
+use bitflags::bitflags;
+
+bitflags! {
+    // N V B2 B D I Z C
+    struct Flags: u8 {
+        const RESET             = 0b0000_0000;
+        const CARRY             = 0b0000_0001;
+        const ZERO              = 0b0000_0010;
+        const INTERRUPT_DSIABLE = 0b0000_0100;
+        const DECIMAL           = 0b0000_1000;
+        const BREAK             = 0b0001_0000;
+        const BREAK2            = 0b0010_0000;
+        const OVERFLOW          = 0b0100_0000;
+        const NEGATIVE          = 0b1000_0000;
+    }
+}
 
 #[allow(non_camel_case_types)]
 pub enum AddressingMode {
@@ -18,7 +34,7 @@ pub struct CPU {
     pub register_a: u8,
     pub register_x: u8,
     pub register_y: u8,
-    pub status: u8, // N V NOT_USED B D I Z C
+    pub status: Flags,
     pub program_counter: u16,
     memory: [u8; 0xFFFF],
 }
@@ -38,7 +54,7 @@ impl CPU {
             register_a: 0,
             register_x: 0,
             register_y: 0,
-            status: 0,
+            status: Flags::RESET,
             program_counter: 0,
             memory: [0; 0xFFFF],
         }
@@ -106,7 +122,7 @@ impl CPU {
     fn reset(&mut self) {
         self.register_a = 0;
         self.register_x = 0;
-        self.status = 0;
+        self.status = Flags::RESET;
         self.program_counter = self.mem_read_u16(0xFFFC);
     }
 
@@ -183,16 +199,16 @@ impl CPU {
     fn update_zero_and_negative_flags(&mut self, value: u8) {
         // setting the Z(ero) flag
         if value == 0 {
-            self.status = self.status | 0b0000_0010;
+            self.status.insert(Flags::ZERO);
         } else {
-            self.status = self.status & 0b1111_1101;
+            self.status.remove(Flags::ZERO);
         }
 
         // Setting the N(egative) flag
         if value & 0b1000_0000 != 0 {
-            self.status = self.status | 0b1000_0000;
+            self.status.insert(Flags::NEGATIVE);
         } else {
-            self.status = self.status & 0b0111_1111;
+            self.status.remove(Flags::NEGATIVE);
         }
     }
 }
