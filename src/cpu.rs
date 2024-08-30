@@ -95,7 +95,13 @@ impl CPU {
             }
             AddressingMode::Indirect => {
                 let addr = self.mem_read_u16(self.program_counter);
-                u16::from_le_bytes([self.mem_read(addr), self.mem_read(addr.wrapping_add(1))])
+                let lo = self.mem_read(addr);
+                let hi = if addr & 0x00FF == 0x00FF { // if im at the page boundary, stay on the same page (ignore)
+                    self.mem_read(addr & 0xFF00)
+                } else {
+                    self.mem_read(addr.wrapping_add(1))
+                };
+                u16::from_le_bytes([lo, hi])
             }
             AddressingMode::Indirect_X => {
                 let addr = self.mem_read(self.program_counter);
