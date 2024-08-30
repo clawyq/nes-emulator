@@ -139,6 +139,25 @@ impl CPU {
         self.mem_write(addr + 1, hi);
     }
 
+    fn push(&mut self, data: u8) {
+        self.mem_write(STACK_ADDR + self.stack_ptr as u16, data);
+        self.stack_ptr = self.stack_ptr.wrapping_sub(1);
+    }
+
+    fn pop(&mut self) -> u8 {
+        self.stack_ptr = self.stack_ptr.wrapping_add(1);
+        self.mem_read(STACK_ADDR + self.stack_ptr as u16)
+    }
+
+    fn push_u16(&mut self, data: u16) {
+        self.push((data >> 8) as u8);
+        self.push((data & 0xFF) as u8);
+    }
+
+    fn pop_u16(&mut self) -> u16 {
+        u16::from_le_bytes([self.pop(), self.pop()])
+    }
+
     fn reset(&mut self) {
         self.register_a = 0;
         self.register_x = 0;
