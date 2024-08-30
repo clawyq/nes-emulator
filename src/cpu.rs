@@ -26,6 +26,7 @@ pub enum AddressingMode {
     Absolute,
     Absolute_X,
     Absolute_Y,
+    Indirect,
     Indirect_X,
     Indirect_Y,
     Implied,
@@ -91,6 +92,10 @@ impl CPU {
             AddressingMode::Absolute_Y => {
                 let addr = self.mem_read_u16(self.program_counter);
                 addr.wrapping_add(self.register_y as u16) as u16
+            }
+            AddressingMode::Indirect => {
+                let addr = self.mem_read_u16(self.program_counter);
+                u16::from_le_bytes([self.mem_read(addr), self.mem_read(addr.wrapping_add(1))])
             }
             AddressingMode::Indirect_X => {
                 let addr = self.mem_read(self.program_counter);
