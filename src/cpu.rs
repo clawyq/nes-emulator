@@ -37,6 +37,7 @@ pub struct CPU {
     pub register_y: u8,
     pub status: Flags,
     pub program_counter: u16,
+    pub stack_ptr: u8,
     memory: [u8; 0xFFFF],
 }
 
@@ -49,6 +50,9 @@ pub struct CPU {
  *
  * Instruction reference according to https://www.nesdev.org/obelisk-6502-guide/reference.html
  */
+
+const STACK_ADDR: u16 = 0x0100;
+const STACK_PTR_INIT: u8 = 0xFD;
 impl CPU {
     pub fn new() -> Self {
         CPU {
@@ -57,6 +61,7 @@ impl CPU {
             register_y: 0,
             status: Flags::RESET,
             program_counter: 0,
+            stack_ptr: STACK_PTR_INIT,
             memory: [0; 0xFFFF],
         }
     }
@@ -125,6 +130,7 @@ impl CPU {
         self.register_x = 0;
         self.status = Flags::RESET;
         self.program_counter = self.mem_read_u16(0xFFFC);
+        self.stack_ptr = STACK_PTR_INIT;
     }
 
     pub fn load_and_run(&mut self, program: Vec<u8>) {
