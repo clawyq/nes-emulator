@@ -180,13 +180,19 @@ impl CPU {
         self.mem_write_u16(0xFFFC, 0x8000);
     }
 
+    fn has_jumped_or_branched(&self, other_addr: u16) -> bool {
+        self.program_counter != other_addr
+    }
+
     pub fn run(&mut self) {
         loop {
             let opcode = self.mem_read(self.program_counter);
             let opcode_details =
                 get_opcode_details(&opcode).expect(&format!("Opcode {opcode} is not recognised."));
+                let mode: &AddressingMode = &(opcode_details.mode);
+
             self.program_counter += 1 as u16;
-            let mode: &AddressingMode = &(opcode_details.mode);
+            let program_counter_before_exec = self.program_counter;
             match opcode {
                 0x00 => {
                     return;
@@ -384,7 +390,9 @@ impl CPU {
                 }
                 _ => todo!(),
             }
-            self.program_counter += opcode_details.additional_bytes as u16;
+            if !self.has_jumped_or_branched(program_counter_before_exec) {
+                self.program_counter += opcode_details.additional_bytes as u16;
+            }
         }
     }
 
