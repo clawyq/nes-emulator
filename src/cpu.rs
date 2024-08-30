@@ -29,6 +29,7 @@ pub enum AddressingMode {
     Indirect,
     Indirect_X,
     Indirect_Y,
+    Implied,
 }
 
 pub struct CPU {
@@ -115,6 +116,9 @@ impl CPU {
                     self.mem_read(addr.wrapping_add(1) as u16),
                 ]);
                 preoffset_addr.wrapping_add(self.register_y as u16)
+            }
+            AddressingMode::Implied => {
+                panic!("Go to sleep. Why you tryna find a new address bruv.")
             }
         }
     }
