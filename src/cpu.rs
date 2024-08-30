@@ -3,9 +3,8 @@ use bitflags::bitflags;
 
 bitflags! {
     // N V B2 B D I Z C
-    #[derive(Clone, PartialEq)]
+    #[derive(Debug, Clone, PartialEq)]
     struct StatusFlags: u8 {
-        const RESET             = 0b0000_0000;
         const CARRY             = 0b0000_0001;
         const ZERO              = 0b0000_0010;
         const INTERRUPT_DSIABLE = 0b0000_0100;
@@ -17,6 +16,7 @@ bitflags! {
     }
 }
 
+#[derive(Debug)]
 #[allow(non_camel_case_types)]
 pub enum AddressingMode {
     Immediate,
@@ -60,7 +60,7 @@ impl CPU {
             register_a: 0,
             register_x: 0,
             register_y: 0,
-            status: StatusFlags::RESET,
+            status: StatusFlags::from_bits_truncate(0),
             program_counter: 0,
             stack_ptr: STACK_PTR_INIT,
             memory: [0; 0xFFFF],
@@ -123,11 +123,11 @@ impl CPU {
         }
     }
 
-    fn mem_read(&self, addr: u16) -> u8 {
+    pub fn mem_read(&self, addr: u16) -> u8 {
         self.memory[addr as usize]
     }
 
-    fn mem_write(&mut self, addr: u16, data: u8) {
+    pub fn mem_write(&mut self, addr: u16, data: u8) {
         self.memory[addr as usize] = data;
     }
 
@@ -161,10 +161,10 @@ impl CPU {
         u16::from_le_bytes([self.pop(), self.pop()])
     }
 
-    fn reset(&mut self) {
+    pub fn reset(&mut self) {
         self.register_a = 0;
         self.register_x = 0;
-        self.status = StatusFlags::RESET;
+        self.status = StatusFlags::from_bits_truncate(0);
         self.stack_ptr = STACK_PTR_INIT;
         self.program_counter = self.mem_read_u16(0xFFFC);
     }
@@ -172,24 +172,27 @@ impl CPU {
     pub fn load_and_run(&mut self, program: Vec<u8>) {
         self.load(program);
         self.reset();
-        self.run();
+        self.run_with_callback(|_| {});
     }
 
-    fn load(&mut self, program: Vec<u8>) {
-        self.memory[0x8000..(0x8000 + program.len())].copy_from_slice(&program[..]);
-        self.mem_write_u16(0xFFFC, 0x8000);
+    pub fn load(&mut self, program: Vec<u8>) {
+        self.memory[0x0600..(0x0600 + program.len())].copy_from_slice(&program[..]);
+        self.mem_write_u16(0xFFFC, 0x0600);
     }
 
     fn has_jumped_or_branched(&self, other_addr: u16) -> bool {
         self.program_counter != other_addr
     }
 
-    pub fn run(&mut self) {
+    pub fn run_with_callback<F>(&mut self, mut callback: F)
+    where
+        F: FnMut(&mut CPU),
+    {
         loop {
             let opcode = self.mem_read(self.program_counter);
             let opcode_details =
                 get_opcode_details(&opcode).expect(&format!("Opcode {opcode} is not recognised."));
-                let mode: &AddressingMode = &(opcode_details.mode);
+            let mode: &AddressingMode = &(opcode_details.mode);
 
             self.program_counter += 1 as u16;
             let program_counter_before_exec = self.program_counter;
@@ -393,6 +396,7 @@ impl CPU {
             if !self.has_jumped_or_branched(program_counter_before_exec) {
                 self.program_counter += opcode_details.additional_bytes as u16;
             }
+            callback(self);
         }
     }
 
@@ -402,18 +406,19 @@ impl CPU {
     }
 
     fn add_to_accumulator(&mut self, value: u8) {
-        let add_result = self.register_a as u16
+        let sum = self.register_a as u16
             + value as u16
             + (if self.status.contains(StatusFlags::CARRY) {
                 1
             } else {
                 0
             }) as u16;
-        self.status.set(StatusFlags::CARRY, add_result > 0xFF);
+        self.status.set(StatusFlags::CARRY, sum > 0xFF);
         self.status.set(
             StatusFlags::OVERFLOW,
-            (value ^ add_result as u8) & (self.register_a ^ add_result as u8) & 0x80 != 0,
+            (value ^ (sum as u8)) & (self.register_a ^ (sum as u8)) & 0x80 != 0,
         );
+        self.register_a = sum as u8;
         self.update_zero_and_negative_flags(self.register_a);
     }
 
@@ -466,7 +471,7 @@ impl CPU {
             return;
         }
 
-        let jump_dist = self.mem_read(self.program_counter);
+        let jump_dist = self.mem_read(self.program_counter) as i8;
         let destination: u16 = self
             .program_counter
             .wrapping_add(1)
@@ -484,9 +489,9 @@ impl CPU {
             self.status.remove(StatusFlags::ZERO);
         }
         self.status
-            .set(StatusFlags::NEGATIVE, result & 0b1000_0000 > 0);
+            .set(StatusFlags::NEGATIVE, data & 0b1000_0000 > 0);
         self.status
-            .set(StatusFlags::OVERFLOW, result & 0b0100_0000 > 0);
+            .set(StatusFlags::OVERFLOW, data & 0b0100_0000 > 0);
     }
 
     fn compare(&mut self, compare_value: u8, mode: &AddressingMode) {
@@ -545,10 +550,9 @@ impl CPU {
     }
 
     fn jsr(&mut self, mode: &AddressingMode) {
-        self.push_u16((self.program_counter + 1)); // stack now has the last byte of the JSR arg -> next execution i will + 1 so i will be at the right instruction
+        self.push_u16(self.program_counter + 1); // stack now has the last byte of the JSR arg -> next execution i will + 1 so i will be at the right instruction
         let addr = self.get_operand_address(mode);
-        let dest = self.mem_read_u16(addr);
-        self.program_counter = dest;
+        self.program_counter = addr;
     }
 
     fn lda(&mut self, mode: &AddressingMode) {
@@ -646,6 +650,7 @@ impl CPU {
                 0
             };
         self.status.set(StatusFlags::CARRY, new_carry == 1);
+        self.mem_write(addr, data);
         self.update_zero_and_negative_flags(data);
     }
 
@@ -672,6 +677,7 @@ impl CPU {
                 0
             };
         self.status.set(StatusFlags::CARRY, new_carry);
+        self.mem_write(addr, data);
         self.update_zero_and_negative_flags(data);
     }
 
@@ -744,19 +750,8 @@ impl CPU {
     }
 
     fn update_zero_and_negative_flags(&mut self, value: u8) {
-        // setting the Z(ero) flag
-        if value == 0 {
-            self.status.insert(StatusFlags::ZERO);
-        } else {
-            self.status.remove(StatusFlags::ZERO);
-        }
-
-        // Setting the N(egative) flag
-        if value & 0b1000_0000 != 0 {
-            self.status.insert(StatusFlags::NEGATIVE);
-        } else {
-            self.status.remove(StatusFlags::NEGATIVE);
-        }
+        self.status.set(StatusFlags::ZERO, value == 0);
+        self.status.set(StatusFlags::NEGATIVE, value & 0b1000_0000 > 0);
     }
 }
 

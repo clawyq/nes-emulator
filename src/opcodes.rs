@@ -1,6 +1,7 @@
 use crate::cpu::AddressingMode;
 use phf::phf_map;
 
+#[derive(Debug)]
 pub struct OpCode {
     pub code: u8,
     pub mnemonic: &'static str,
