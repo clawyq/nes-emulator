@@ -4,7 +4,7 @@ use bitflags::bitflags;
 bitflags! {
     // N V B2 B D I Z C
     #[derive(PartialEq)]
-    struct Flags: u8 {
+    struct StatusFlags: u8 {
         const RESET             = 0b0000_0000;
         const CARRY             = 0b0000_0001;
         const ZERO              = 0b0000_0010;
@@ -35,9 +35,9 @@ pub struct CPU {
     pub register_a: u8,
     pub register_x: u8,
     pub register_y: u8,
-    pub status: Flags,
-    pub program_counter: u16,
+    pub status: StatusFlags,
     pub stack_ptr: u8,
+    pub program_counter: u16,
     memory: [u8; 0xFFFF],
 }
 
@@ -59,7 +59,7 @@ impl CPU {
             register_a: 0,
             register_x: 0,
             register_y: 0,
-            status: Flags::RESET,
+            status: StatusFlags::RESET,
             program_counter: 0,
             stack_ptr: STACK_PTR_INIT,
             memory: [0; 0xFFFF],
@@ -128,9 +128,9 @@ impl CPU {
     fn reset(&mut self) {
         self.register_a = 0;
         self.register_x = 0;
-        self.status = Flags::RESET;
-        self.program_counter = self.mem_read_u16(0xFFFC);
+        self.status = StatusFlags::RESET;
         self.stack_ptr = STACK_PTR_INIT;
+        self.program_counter = self.mem_read_u16(0xFFFC);
     }
 
     pub fn load_and_run(&mut self, program: Vec<u8>) {
@@ -206,16 +206,16 @@ impl CPU {
     fn update_zero_and_negative_flags(&mut self, value: u8) {
         // setting the Z(ero) flag
         if value == 0 {
-            self.status.insert(Flags::ZERO);
+            self.status.insert(StatusFlags::ZERO);
         } else {
-            self.status.remove(Flags::ZERO);
+            self.status.remove(StatusFlags::ZERO);
         }
 
         // Setting the N(egative) flag
         if value & 0b1000_0000 != 0 {
-            self.status.insert(Flags::NEGATIVE);
+            self.status.insert(StatusFlags::NEGATIVE);
         } else {
-            self.status.remove(Flags::NEGATIVE);
+            self.status.remove(StatusFlags::NEGATIVE);
         }
     }
 }
@@ -229,8 +229,8 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa9, 0x05, 0x00]);
         assert_eq!(cpu.register_a, 0b0000_0101);
-        assert!(!cpu.status.contains(Flags::ZERO));
-        assert!(!cpu.status.contains(Flags::NEGATIVE));
+        assert!(!cpu.status.contains(StatusFlags::ZERO));
+        assert!(!cpu.status.contains(StatusFlags::NEGATIVE));
     }
 
     #[test]
@@ -238,8 +238,8 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa9, 0x00, 0x00]);
         assert_eq!(cpu.register_a, 0x00);
-        assert!(cpu.status.contains(Flags::ZERO));
-        assert!(!cpu.status.contains(Flags::NEGATIVE));
+        assert!(cpu.status.contains(StatusFlags::ZERO));
+        assert!(!cpu.status.contains(StatusFlags::NEGATIVE));
     }
 
     #[test]
@@ -247,8 +247,8 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa9, 0x09, 0x00]);
         assert_eq!(cpu.register_a, 0x09);
-        assert!(!cpu.status.contains(Flags::ZERO));
-        assert!(!cpu.status.contains(Flags::NEGATIVE));
+        assert!(!cpu.status.contains(StatusFlags::ZERO));
+        assert!(!cpu.status.contains(StatusFlags::NEGATIVE));
     }
 
     #[test]
@@ -256,8 +256,8 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa2, 0x05, 0x00]);
         assert_eq!(cpu.register_x, 0b0000_0101);
-        assert!(!cpu.status.contains(Flags::ZERO));
-        assert!(!cpu.status.contains(Flags::NEGATIVE));
+        assert!(!cpu.status.contains(StatusFlags::ZERO));
+        assert!(!cpu.status.contains(StatusFlags::NEGATIVE));
     }
 
     #[test]
@@ -265,8 +265,8 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa2, 0x00, 0x00]);
         assert_eq!(cpu.register_x, 0x00);
-        assert!(cpu.status.contains(Flags::ZERO));
-        assert!(!cpu.status.contains(Flags::NEGATIVE));
+        assert!(cpu.status.contains(StatusFlags::ZERO));
+        assert!(!cpu.status.contains(StatusFlags::NEGATIVE));
     }
 
     #[test]
@@ -274,8 +274,8 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa2, 0x09, 0x00]);
         assert_eq!(cpu.register_x, 0x09);
-        assert!(!cpu.status.contains(Flags::ZERO));
-        assert!(!cpu.status.contains(Flags::NEGATIVE));
+        assert!(!cpu.status.contains(StatusFlags::ZERO));
+        assert!(!cpu.status.contains(StatusFlags::NEGATIVE));
     }
 
     #[test]
@@ -284,8 +284,8 @@ mod test {
         cpu.load_and_run(vec![0xa9, 10, 0xaa, 0x00]);
 
         assert_eq!(cpu.register_x, 10);
-        assert!(!cpu.status.contains(Flags::ZERO));
-        assert!(!cpu.status.contains(Flags::NEGATIVE));
+        assert!(!cpu.status.contains(StatusFlags::ZERO));
+        assert!(!cpu.status.contains(StatusFlags::NEGATIVE));
     }
 
     #[test]
