@@ -410,7 +410,10 @@ impl CPU {
                 0
             }) as u16;
         self.status.set(StatusFlags::CARRY, add_result > 0xFF);
-        self.status.set(StatusFlags::OVERFLOW, (value ^ add_result as u8) & (self.register_a ^ add_result as u8) & 0x80 != 0);
+        self.status.set(
+            StatusFlags::OVERFLOW,
+            (value ^ add_result as u8) & (self.register_a ^ add_result as u8) & 0x80 != 0,
+        );
         self.update_zero_and_negative_flags(self.register_a);
     }
 
@@ -737,7 +740,7 @@ impl CPU {
     }
 
     fn txs(&mut self) {
-        self.stack_ptr =self.register_x;
+        self.stack_ptr = self.register_x;
     }
 
     fn update_zero_and_negative_flags(&mut self, value: u8) {
