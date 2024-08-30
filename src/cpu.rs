@@ -104,7 +104,10 @@ impl CPU {
             }
             AddressingMode::Indirect_Y => {
                 let addr = self.mem_read(self.program_counter);
-                let preoffset_addr = u16::from_le_bytes([self.mem_read(addr as u16), self.mem_read(addr.wrapping_add(1) as u16)]);
+                let preoffset_addr = u16::from_le_bytes([
+                    self.mem_read(addr as u16),
+                    self.mem_read(addr.wrapping_add(1) as u16),
+                ]);
                 preoffset_addr.wrapping_add(self.register_y as u16)
             }
             AddressingMode::Implied => panic!("Go to sleep. This is not working."),
@@ -326,9 +329,19 @@ mod test {
         let reg_a_val = 0x09;
         let reg_x_val = 0x02;
         let destination_addr = 0x28;
-        cpu.load_and_run(vec![0xa2, reg_x_val, 0xa9, reg_a_val, 0x95, destination_addr]);
+        cpu.load_and_run(vec![
+            0xa2,
+            reg_x_val,
+            0xa9,
+            reg_a_val,
+            0x95,
+            destination_addr,
+        ]);
 
         assert_eq!(cpu.register_a, reg_a_val);
-        assert_eq!(cpu.memory[(destination_addr.wrapping_add(reg_x_val)) as usize], reg_a_val);
+        assert_eq!(
+            cpu.memory[(destination_addr.wrapping_add(reg_x_val)) as usize],
+            reg_a_val
+        );
     }
 }
