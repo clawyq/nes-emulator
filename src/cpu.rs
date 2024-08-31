@@ -1,4 +1,4 @@
-use crate::opcodes::get_opcode_details;
+use crate::{bus::Bus, opcodes::get_opcode_details};
 use bitflags::bitflags;
 
 bitflags! {
@@ -39,6 +39,7 @@ pub struct CPU {
     pub status: StatusFlags,
     pub stack_ptr: u8,
     pub program_counter: u16,
+    pub bus: Bus,
 }
 
 pub trait Mem {
@@ -99,7 +100,7 @@ impl CPU {
             status: StatusFlags::from_bits_truncate(0),
             program_counter: 0,
             stack_ptr: STACK_PTR_INIT,
-            memory: [0; 0xFFFF],
+            bus: Bus::new()
         }
     }
 

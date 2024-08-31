@@ -1,3 +1,4 @@
+use cpu::Mem;
 use cpu::CPU;
 use rand::Rng;
 use sdl2::event::Event;
@@ -6,6 +7,7 @@ use sdl2::pixels::Color;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::EventPump;
 
+mod bus;
 mod cpu;
 mod opcodes;
 
