@@ -184,7 +184,7 @@ impl CPU {
         self.register_x = 0;
         self.status = StatusFlags::from_bits_truncate(0);
         self.stack_ptr = STACK_PTR_INIT;
-        self.program_counter = self.mem_read_u16(0xFFFC);
+        self.program_counter = 0x0600;
     }
 
     pub fn load_and_run(&mut self, program: Vec<u8>) {
@@ -194,8 +194,9 @@ impl CPU {
     }
 
     pub fn load(&mut self, program: Vec<u8>) {
-        self.memory[0x0600..(0x0600 + program.len())].copy_from_slice(&program[..]);
-        self.mem_write_u16(0xFFFC, 0x0600);
+        program.iter().enumerate().for_each(|(i, &byte)| {
+            self.mem_write(0x0600 + i as u16, byte);
+        });
     }
 
     fn has_jumped_or_branched(&self, other_addr: u16) -> bool {
