@@ -184,9 +184,10 @@ impl CPU {
     pub fn reset(&mut self) {
         self.register_a = 0;
         self.register_x = 0;
+        self.register_y = 0;
         self.status = StatusFlags::from_bits_truncate(0);
         self.stack_ptr = STACK_PTR_INIT;
-        self.program_counter = 0x0600;
+        self.program_counter = self.mem_read_u16(0xFFFC);
     }
 
     pub fn load_and_run(&mut self, program: Vec<u8>) {
