@@ -866,7 +866,7 @@ mod test {
         cpu.load_and_run(vec![0xa9, reg_a_val, 0x85, destination_addr]);
 
         assert_eq!(cpu.register_a, reg_a_val);
-        assert_eq!(cpu.memory[destination_addr as usize], reg_a_val);
+        assert_eq!(cpu.mem_read(destination_addr as u16), reg_a_val);
     }
 
     #[test]
@@ -886,7 +886,7 @@ mod test {
 
         assert_eq!(cpu.register_a, reg_a_val);
         assert_eq!(
-            cpu.memory[(destination_addr.wrapping_add(reg_x_val)) as usize],
+            cpu.mem_read((destination_addr as u16).wrapping_add(reg_x_val as u16)),
             reg_a_val
         );
     }
