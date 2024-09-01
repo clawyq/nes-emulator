@@ -45,7 +45,9 @@ pub struct CPU {
 pub trait Mem {
     fn mem_read(&self, addr: u16) -> u8;
 
-    fn mem_write(&mut self, addr: u16, data: u8);
+    fn mem_write(&mut self, addr: u16, data: u8) {
+        panic!("Attempted to write data to a read-only address.");
+    }
 
     fn mem_read_u16(&self, pos: u16) -> u16 {
         let lo = self.mem_read(pos) as u16;
@@ -92,7 +94,7 @@ impl Mem for CPU {
 const STACK_ADDR: u16 = 0x0100;
 const STACK_PTR_INIT: u8 = 0xFD;
 impl CPU {
-    pub fn new() -> Self {
+    pub fn new(bus: Bus) -> Self {
         CPU {
             register_a: 0,
             register_x: 0,
@@ -100,7 +102,7 @@ impl CPU {
             status: StatusFlags::from_bits_truncate(0),
             program_counter: 0,
             stack_ptr: STACK_PTR_INIT,
-            bus: Bus::new()
+            bus
         }
     }
 

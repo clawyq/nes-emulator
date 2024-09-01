@@ -1,4 +1,4 @@
-use std::error::Error;
+use crate::{bus::ROM_START, cpu::Mem};
 
 const NES_TAG: [u8; 4] = [0x4E, 0x45, 0x53, 0x1A];
 const PRG_ROM_BANK_SIZE: usize = 16 * 1024;
@@ -11,11 +11,24 @@ const NUM_CHR_ROM_BANK_POS: usize = 5;
 const CONTROL_BYTE1_POS: usize = 6;
 const CONTROL_BYTE2_POS: usize = 7;
 
-pub struct Cartridge {
+pub struct Rom {
     chr_rom: Vec<u8>,
     prg_rom: Vec<u8>,
     mapper_type: u8,
     mirror_mode: Mirroring
+}
+
+impl Mem for Rom {
+    fn mem_read(&self, addr: u16) -> u8 {
+        let rom_relative_addr = addr - ROM_START;
+        self.prg_rom[
+            (if rom_relative_addr > 0x4000 && self.prg_rom.len() > 0x4000 {
+                rom_relative_addr % 0x4000
+            } else {
+                rom_relative_addr
+            }) as usize
+        ]
+    }
 }
 
 pub enum Mirroring {
@@ -24,8 +37,8 @@ pub enum Mirroring {
     FOUR_SCREEN
 }
 
-impl Cartridge {
-    fn new(rom: &Vec<u8>) -> Result<Self, String> {
+impl Rom {
+    pub fn new(rom: &Vec<u8>) -> Result<Self, String> {
         if &rom[0..NES_IDENTIFIER_SIZE] != NES_TAG {
             return Err("Not a valid .NES file!".to_string());
         }
@@ -50,7 +63,7 @@ impl Cartridge {
         let prg_rom = rom[prg_rom_start..chr_rom_start].to_vec();
         let chr_rom = rom[chr_rom_start..chr_rom_start + chr_rom_size].to_vec();
 
-        Ok(Cartridge {
+        Ok(Rom {
             chr_rom,
             prg_rom,
             mapper_type,
