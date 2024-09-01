@@ -8,6 +8,7 @@ use sdl2::pixels::PixelFormatEnum;
 use sdl2::EventPump;
 
 mod bus;
+mod cartridge;
 mod cpu;
 mod opcodes;
 
