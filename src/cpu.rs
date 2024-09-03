@@ -144,9 +144,12 @@ impl CPU {
                 u16::from_le_bytes([lo, hi])
             }
             AddressingMode::Indirect_X => {
-                let addr = self.mem_read(self.program_counter);
-                let x_addr = addr.wrapping_add(self.register_x) as u16;
-                u16::from_le_bytes([self.mem_read(x_addr), self.mem_read(x_addr.wrapping_add(1))])
+                let addr: u8 = self.mem_read(addr);
+                let x_addr = addr.wrapping_add(self.register_x);
+                u16::from_le_bytes([
+                    self.mem_read(x_addr as u16),
+                    self.mem_read(x_addr.wrapping_add(1) as u16), //LET IT OVERFLOW
+                ])
             }
             AddressingMode::Indirect_Y => {
                 let addr = self.mem_read(self.program_counter);
