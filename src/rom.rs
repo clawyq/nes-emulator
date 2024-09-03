@@ -6,8 +6,8 @@ use std::{
 use crate::{bus::ROM_START, cpu::Mem};
 
 const NES_TAG: [u8; 4] = [0x4E, 0x45, 0x53, 0x1A];
-const PRG_ROM_BANK_SIZE: usize = 16 * 1024;
-const CHR_ROM_BANK_SIZE: usize = 8 * 1024;
+pub const PRG_ROM_BANK_SIZE: usize = 16 * 1024;
+pub const CHR_ROM_BANK_SIZE: usize = 8 * 1024;
 const HEADER_SIZE: usize = 16;
 const TRAINER_SIZE: usize = 16;
 const NES_IDENTIFIER_SIZE: usize = 4;
@@ -140,4 +140,47 @@ fn create_cartridge(path_to_game: &str) -> Result<Vec<u8>, String> {
         .map_err(|e| format!("Error flushing ROM file: {e}"))?;
     println!("{path_to_game}.nes created!");
     Ok(bytes)
+}
+
+pub mod test {
+
+    use super::*;
+
+    struct TestRom {
+        header: Vec<u8>,
+        trainer: Option<Vec<u8>>,
+        pgp_rom: Vec<u8>,
+        chr_rom: Vec<u8>,
+    }
+
+    fn create_rom(rom: TestRom) -> Vec<u8> {
+        let mut result = Vec::with_capacity(
+            rom.header.len()
+                + rom.trainer.as_ref().map_or(0, |t| t.len())
+                + rom.pgp_rom.len()
+                + rom.chr_rom.len(),
+        );
+
+        result.extend(&rom.header);
+        if let Some(t) = rom.trainer {
+            result.extend(t);
+        }
+        result.extend(&rom.pgp_rom);
+        result.extend(&rom.chr_rom);
+
+        result
+    }
+
+    pub fn test_rom() -> Rom {
+        let test_rom = create_rom(TestRom {
+            header: vec![
+                0x4E, 0x45, 0x53, 0x1A, 0x02, 0x01, 0x31, 00, 00, 00, 00, 00, 00, 00, 00, 00,
+            ],
+            trainer: None,
+            pgp_rom: vec![1; 2 * PRG_ROM_BANK_SIZE],
+            chr_rom: vec![2; 1 * CHR_ROM_BANK_SIZE],
+        });
+
+        Rom::new(&test_rom).unwrap()
+    }
 }

@@ -1,7 +1,4 @@
-use crate::{
-    rom::Rom,
-    cpu::Mem,
-};
+use crate::{cpu::Mem, rom::Rom};
 
 const RAM: u16 = 0x0000;
 const RAM_MIRRORS_END: u16 = 0x1FFF;
@@ -41,9 +38,12 @@ impl Mem for Bus {
     fn mem_read(&self, addr: u16) -> u8 {
         match addr {
             RAM..=RAM_MIRRORS_END => self.vram[BusDevice::CPU.mirror_addr(addr)],
-            PPU_REGISTERS..=PPU_REGISTERS_MIRRORS_END => todo!("BusDevice::CPU.mirror_addr(addr)"),
+            PPU_REGISTERS..=PPU_REGISTERS_MIRRORS_END => 0, //todo!("BusDevice::CPU.mirror_addr(addr)"),
             ROM_START..=0xFFFF => self.rom.mem_read(addr),
-            _ => panic!("{}", format!("Out of range: {}", addr)),
+            _ => {
+                println!("{}", format!("Out of range: {}", addr));
+                0
+            }
         }
     }
 
@@ -51,8 +51,11 @@ impl Mem for Bus {
         match addr {
             RAM..=RAM_MIRRORS_END => self.vram[BusDevice::CPU.mirror_addr(addr)] = data,
             PPU_REGISTERS..=PPU_REGISTERS_MIRRORS_END => todo!("BusDevice::CPU.mirror_addr(addr)"),
-            ROM_START..=0xFFFF => panic!("{}", format!("Invalid request to write to ROM PRG: {}", addr)),
-            _ => panic!("{}", format!("Out of range: {}", addr)),
+            ROM_START..=0xFFFF => panic!(
+                "{}",
+                format!("Invalid request to write to ROM PRG: {}", addr)
+            ),
+            _ => println!("{}", format!("Out of range: {}", addr)),
         }
     }
 }

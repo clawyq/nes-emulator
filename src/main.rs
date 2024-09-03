@@ -1,4 +1,5 @@
 use bus::Bus;
+use logger::log;
 use rom::insert_new_cartridge;
 use rom::Rom;
 use cpu::Mem;
@@ -14,6 +15,7 @@ mod bus;
 mod cpu;
 mod rom;
 mod opcodes;
+mod logger;
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();
@@ -33,16 +35,18 @@ fn main() {
         .create_texture_target(PixelFormatEnum::RGB24, 32, 32)
         .unwrap();
 
-    let game_code = insert_new_cartridge("snake").unwrap();
+    let game_code = insert_new_cartridge("nestest").unwrap();
     let rom = Rom::new(&game_code).unwrap();
     let bus = Bus::new(rom);
     let mut cpu = CPU::new(bus);
     cpu.reset();
+    cpu.program_counter = 0xC000;
 
     let mut screen_state = [0 as u8; 32 * 3 * 32];
     let mut rng = rand::thread_rng();
 
     cpu.run_with_callback(move |cpu| {
+        println!("{}", log(cpu));
         handle_user_input(cpu, &mut event_pump);
         cpu.mem_write(0xfe, rng.gen_range(0..=16));
 
