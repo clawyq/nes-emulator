@@ -63,19 +63,8 @@ impl Mem for Bus {
     fn mem_write(&mut self, addr: u16, data: u8) {
         match addr {
             RAM..=RAM_MIRRORS_END => self.vram[BusDevice::CPU.mirror_addr(addr) as usize] = data,
-            // move ths to ppu
-            0x2001 => {
-                // self.ppu.mask
-            }
-            0x2002 => {
-                panic!("Attempt to read from write-only PPU address {:x}", addr);
-                // 0
-            }
-            0x2005 => {
-                self.ppu.write_scroll(data);
-            }
-            0x2008..=PPU_REGISTERS_MIRRORS_END => {
-                self.mem_write(BusDevice::PPU.mirror_addr(addr), data)
+            PPU_REGISTERS..=PPU_REGISTERS_MIRRORS_END => {
+                self.ppu.mem_write(BusDevice::PPU.mirror_addr(addr), data)
             }
             ROM_START..=0xFFFF => panic!(
                 "{}",
