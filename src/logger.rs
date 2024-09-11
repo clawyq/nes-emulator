@@ -1,6 +1,6 @@
 use crate::{cpu::{AddressingMode, Mem, CPU}, opcodes::get_opcode_details};
 
-pub fn log(cpu: &CPU) -> String {
+pub fn log(cpu: &mut CPU) -> String {
     let opcode = cpu.mem_read(cpu.program_counter);
 
     let opcode_details = get_opcode_details(&opcode).unwrap();

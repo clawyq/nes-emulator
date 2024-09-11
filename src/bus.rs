@@ -1,5 +1,4 @@
-use crate::{cpu::Mem, rom::Rom};
-
+use crate::{cpu::Mem, ppu::PPU, rom::Rom};
 const RAM: u16 = 0x0000;
 const RAM_MIRRORS_END: u16 = 0x1FFF;
 const PPU_REGISTERS: u16 = 0x2000;
@@ -8,7 +7,8 @@ pub const ROM_START: u16 = 0x8000;
 
 pub struct Bus {
     vram: [u8; 2048],
-    rom: Rom,
+    ppu: PPU,
+    prg_rom: Vec<u8>,
 }
 
 enum BusDevice {
@@ -17,29 +17,42 @@ enum BusDevice {
 }
 
 impl BusDevice {
-    fn mirror_addr(&self, addr: u16) -> usize {
+    fn mirror_addr(&self, addr: u16) -> u16 {
         match self {
-            BusDevice::CPU => (addr & 0x7FF) as usize,
-            BusDevice::PPU => (addr & 0x2007) as usize,
+            BusDevice::CPU => addr & 0x7FF,
+            BusDevice::PPU => addr & 0x2007,
         }
     }
 }
 
 impl Bus {
     pub fn new(rom: Rom) -> Self {
+        let ppu = PPU::new(rom.chr_rom, rom.mirror_mode);
         Bus {
             vram: [0; 2048],
-            rom,
+            ppu,
+            prg_rom: rom.prg_rom,
         }
+    }
+
+    fn prg_read(&self, addr: u16) -> u8 {
+        let rom_relative_addr = addr - ROM_START;
+        self.prg_rom[(if rom_relative_addr >= 0x4000 && self.prg_rom.len() == 0x4000 {
+            rom_relative_addr % 0x4000
+        } else {
+            rom_relative_addr
+        }) as usize]
     }
 }
 
 impl Mem for Bus {
-    fn mem_read(&self, addr: u16) -> u8 {
+    fn mem_read(&mut self, addr: u16) -> u8 {
         match addr {
-            RAM..=RAM_MIRRORS_END => self.vram[BusDevice::CPU.mirror_addr(addr)],
-            PPU_REGISTERS..=PPU_REGISTERS_MIRRORS_END => 0, //todo!("BusDevice::CPU.mirror_addr(addr)"),
-            ROM_START..=0xFFFF => self.rom.mem_read(addr),
+            RAM..=RAM_MIRRORS_END => self.vram[BusDevice::CPU.mirror_addr(addr) as usize],
+            PPU_REGISTERS..=PPU_REGISTERS_MIRRORS_END => {
+                self.ppu.mem_read(BusDevice::PPU.mirror_addr(addr))
+            },
+            ROM_START..=0xFFFF => self.prg_read(addr),
             _ => {
                 println!("{}", format!("Out of range: {}", addr));
                 0
@@ -49,8 +62,21 @@ impl Mem for Bus {
 
     fn mem_write(&mut self, addr: u16, data: u8) {
         match addr {
-            RAM..=RAM_MIRRORS_END => self.vram[BusDevice::CPU.mirror_addr(addr)] = data,
-            PPU_REGISTERS..=PPU_REGISTERS_MIRRORS_END => todo!("BusDevice::CPU.mirror_addr(addr)"),
+            RAM..=RAM_MIRRORS_END => self.vram[BusDevice::CPU.mirror_addr(addr) as usize] = data,
+            // move ths to ppu
+            0x2001 => {
+                // self.ppu.mask
+            }
+            0x2002 => {
+                panic!("Attempt to read from write-only PPU address {:x}", addr);
+                // 0
+            }
+            0x2005 => {
+                self.ppu.write_scroll(data);
+            }
+            0x2008..=PPU_REGISTERS_MIRRORS_END => {
+                self.mem_write(BusDevice::PPU.mirror_addr(addr), data)
+            }
             ROM_START..=0xFFFF => panic!(
                 "{}",
                 format!("Invalid request to write to ROM PRG: {}", addr)
