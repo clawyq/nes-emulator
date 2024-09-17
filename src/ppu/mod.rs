@@ -6,12 +6,19 @@ use registers::{
     scroll::ScrollRegister, status::StatusRegister,
 };
 
+// KEY ADDRESSES
 pub const NAME_TABLE_SIZE: u16 = 0x400;
 pub const CHR_ROM_END_ADDR: u16 = 0x1FFF;
 pub const NAME_TABLE_START_ADDR: u16 = 0x2000;
 pub const NAME_TABLE_END_ADDR: u16 = 0x2FFF;
 pub const PALETTE_START_ADDR: u16 = 0x3f00;
 pub const BEFORE_MIRROR_RANGE: u16 = 0x3FFF;
+
+// CLOCK
+const SCAN_LINES_PER_FRAME: u16 = 262;
+const CLOCK_CYCLES_PER_SCAN_LINE: usize  = 341;
+const SCAN_LINE_INTERRUPT: u16  = 241;
+
 pub struct PPU {
     pub chr_rom: Vec<u8>,
     pub mirror_mode: Mirroring,
@@ -24,6 +31,8 @@ pub struct PPU {
     mask: MaskRegister,
     oam: Oam,
     data_buffer: u8,
+    scan_line: u16,
+    cycles: usize,
 }
 
 impl Mem for PPU {
@@ -73,7 +82,31 @@ impl PPU {
             mask: MaskRegister::new(),
             oam: Oam::new(),
             data_buffer: 0,
+            scan_line: 0,
+            cycles: 0,
         }
+    }
+
+    pub fn tick(&mut self, cycles: u8) -> bool {
+        self.cycles += cycles as usize;
+        if self.cycles >= CLOCK_CYCLES_PER_SCAN_LINE {
+            self.cycles = self.cycles - CLOCK_CYCLES_PER_SCAN_LINE;
+            self.scan_line += 1;
+
+            if self.scan_line == SCAN_LINE_INTERRUPT {
+                if self.control.generate_nmi() {
+                    self.status.set_vblank(true);
+                    todo!("nmi interrupt")
+                }
+            }
+
+            if self.scan_line >= SCAN_LINES_PER_FRAME {
+                self.scan_line = 0;
+                self.status.reset_vblank();
+                return true;
+            }
+        }
+        return false;
     }
 
     fn read_status(&mut self) -> u8 {
