@@ -10,7 +10,7 @@ pub fn log(cpu: &mut CPU) -> String {
     let (mem_addr, value) = match opcode_details.mode {
         AddressingMode::Immediate | AddressingMode::Implied => (0, 0),
         _ => {
-            let addr = cpu.get_absolute_address(&opcode_details.mode, cpu.program_counter + 1);
+            let (addr, _) = cpu.get_absolute_address(&opcode_details.mode, cpu.program_counter + 1);
             (addr, cpu.mem_read(addr))
         }
     };

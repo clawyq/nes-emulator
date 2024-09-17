@@ -9,6 +9,7 @@ pub struct Bus {
     vram: [u8; 2048],
     ppu: PPU,
     prg_rom: Vec<u8>,
+    cycles: usize
 }
 
 enum BusDevice {
@@ -32,6 +33,7 @@ impl Bus {
             vram: [0; 2048],
             ppu,
             prg_rom: rom.prg_rom,
+            cycles: 0
         }
     }
 
@@ -42,6 +44,11 @@ impl Bus {
         } else {
             rom_relative_addr
         }) as usize]
+    }
+
+    pub fn tick(&mut self, cycles: u8) {
+        self.ppu.tick(cycles * 3);
+        self.cycles += cycles as usize;
     }
 }
 
