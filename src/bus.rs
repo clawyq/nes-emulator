@@ -9,7 +9,7 @@ pub struct Bus {
     vram: [u8; 2048],
     ppu: PPU,
     prg_rom: Vec<u8>,
-    cycles: usize
+    cycles: usize,
 }
 
 enum BusDevice {
@@ -33,7 +33,7 @@ impl Bus {
             vram: [0; 2048],
             ppu,
             prg_rom: rom.prg_rom,
-            cycles: 0
+            cycles: 0,
         }
     }
 
@@ -50,6 +50,10 @@ impl Bus {
         self.ppu.tick(cycles * 3);
         self.cycles += cycles as usize;
     }
+
+    pub fn check_nmi(&mut self) -> Option<bool> {
+        self.ppu.poll_nmi()
+    }
 }
 
 impl Mem for Bus {
@@ -58,7 +62,7 @@ impl Mem for Bus {
             RAM..=RAM_MIRRORS_END => self.vram[BusDevice::CPU.mirror_addr(addr) as usize],
             PPU_REGISTERS..=PPU_REGISTERS_MIRRORS_END => {
                 self.ppu.mem_read(BusDevice::PPU.mirror_addr(addr))
-            },
+            }
             ROM_START..=0xFFFF => self.prg_read(addr),
             _ => {
                 println!("{}", format!("Out of range: {}", addr));

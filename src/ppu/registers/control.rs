@@ -18,8 +18,14 @@ impl ControlRegister {
         ControlRegister::from_bits_truncate(0000_0000)
     }
 
-    pub fn update(&mut self, data: u8) {
+    pub fn update(&mut self, data: u8, in_vblank: bool) -> Option<bool>{
+        let prev_nmi = self.generate_nmi();
         *self = ControlRegister::from_bits_truncate(data);
+        let curr_nmi = self.generate_nmi();
+        if prev_nmi && curr_nmi && in_vblank {
+            return Some(true);
+        }
+        return None;
     }
 
     pub fn get_nametable_address(&self) -> u16 {

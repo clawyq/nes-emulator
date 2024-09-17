@@ -33,6 +33,7 @@ pub struct PPU {
     data_buffer: u8,
     scan_line: u16,
     cycles: usize,
+    nmi: Option<bool>
 }
 
 impl Mem for PPU {
@@ -54,7 +55,9 @@ impl Mem for PPU {
 
     fn mem_write(&mut self, addr: u16, data: u8) {
         match addr {
-            0x2000 => self.control.update(data),
+            0x2000 => {
+                self.nmi = self.control.update(data, self.status.is_in_vblank());
+            },
             0x2001 => self.mask.update(data),
             0x2002 => panic!("Attempted to write to PPU status register >:("),
             0x2003 => self.oam.write_addr(data),
@@ -84,6 +87,7 @@ impl PPU {
             data_buffer: 0,
             scan_line: 0,
             cycles: 0,
+            nmi: None
         }
     }
 
@@ -94,19 +98,26 @@ impl PPU {
             self.scan_line += 1;
 
             if self.scan_line == SCAN_LINE_INTERRUPT {
+                self.status.set_vblank(true);
+                self.status.set_sprite_zero_hit(false);
                 if self.control.generate_nmi() {
-                    self.status.set_vblank(true);
-                    todo!("nmi interrupt")
+                    self.nmi = Some(true);
                 }
             }
 
             if self.scan_line >= SCAN_LINES_PER_FRAME {
                 self.scan_line = 0;
+                self.nmi = None;
+                self.status.set_sprite_zero_hit(false);
                 self.status.reset_vblank();
                 return true;
             }
         }
         return false;
+    }
+    
+    pub fn poll_nmi(&mut self) -> Option<bool> {
+        self.nmi.take()
     }
 
     fn read_status(&mut self) -> u8 {

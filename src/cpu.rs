@@ -221,11 +221,27 @@ impl CPU {
         self.program_counter != other_addr
     }
 
+    fn interrupt_nmi(&mut self) {
+        self.push_u16(self.program_counter);
+        let mut status = self.status.clone();
+        status.remove(StatusFlags::BREAK);
+        status.insert(StatusFlags::BREAK2);
+        self.push(status.bits());
+        self.status.insert(StatusFlags::INTERRUPT_DISABLE);
+        self.bus.tick(2);
+        self.program_counter = self.mem_read_u16(0xFFFA);
+    }
+
+
     pub fn run_with_callback<F>(&mut self, mut callback: F)
     where
         F: FnMut(&mut CPU),
     {
         loop {
+            if let Some(_nmi) = self.bus.check_nmi() {
+                self.interrupt_nmi();
+            }
+
             callback(self);
             let opcode = self.mem_read(self.program_counter);
             let opcode_details =
